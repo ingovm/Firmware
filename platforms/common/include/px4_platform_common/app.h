@@ -55,15 +55,18 @@ public:
 
 	bool isRunning() { return _isRunning; }
 	void setRunning(bool running) { _isRunning = running; }
+	void setExitRequested(bool request) { _exitRequested = request; }
 
 protected:
 	bool _exitRequested;
 	bool _isRunning;
+
 private:
 	AppState(const AppState &);
 	const AppState &operator=(const AppState &);
 };
-}
+
+} // namespace px4
 
 // Task/process based build
 

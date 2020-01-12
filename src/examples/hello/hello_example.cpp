@@ -50,14 +50,15 @@ int HelloExample::main()
 {
 	appState.setRunning(true);
 
-	int i = 0;
-
-	while (!appState.exitRequested() && i < 5) {
+	while (!appState.exitRequested())
+	{
 		px4_sleep(2);
 
 		printf("  Doing work...\n");
-		++i;
 	}
+
+	appState.setRunning(false);
+	appState.setExitRequested(false);
 
 	return 0;
 }
