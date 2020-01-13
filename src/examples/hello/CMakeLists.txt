@@ -39,5 +39,6 @@ px4_add_module(
 		hello_main.cpp
 		hello_start.cpp
 		hello_example.cpp
+		hg_temp.cpp
 	DEPENDS
 	)

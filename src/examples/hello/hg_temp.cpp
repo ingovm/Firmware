@@ -1,7 +1,6 @@
-
 /****************************************************************************
  *
- *   Copyright (C) 2015 Mark Charlebois. All rights reserved.
+ *   Copyright 2019 NXP.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -13,9 +12,9 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * 3. Neither the name of the copyright holder nor the names of its 
+ *    contributors may be used to endorse or promote products derived 
+ *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -31,41 +30,76 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file hello_example.cpp
- * Example for Linux
+ * @file hg_temp.cpp
  *
- * @author Mark Charlebois <charlebm@gmail.com>
+ * Example app for temperature measurement with Melaxis MLX90614 using I2C
+ *
+ * @author Katrin Moritz
+ * @author Leo Mustafa
  */
 
-#include "hello_example.h"
+/* Includes */
 #include "hg_temp.h"
-#include <px4_platform_common/time.h>
-#include <px4_platform_common/log.h>
-#include <unistd.h>
-#include <stdio.h>
+#include <px4_platform_common/getopt.h>
 
-px4::AppState HelloExample::appState;
-
-int HelloExample::main()
+/* Constructor */
+HG_Temp::HG_Temp() : I2C("MLX90614", "/dev/mlx90614", PX4_I2C_BUS_EXPANSION, MLX90614_I2CADDR, MLX90614_BUS_SPEED)
 {
-	HG_Temp temp;
+	HG_Temp::init();
+}
 
-	appState.setRunning(true);
+/* Initialization of I2C device */
+int HG_Temp::init()
+{
+	int ret = OK;
 
-	// wait for sensor data to be ready
-	px4_sleep(1);
+	/* do I2C init (and probe) first */
+	ret = I2C::init();
 
-	while (!appState.exitRequested())
+	/* if probe/setup failed, bail now */
+	if (ret != OK)
 	{
-		// print temperatures
-		printf("Ambient %+2.2f | Object %+2.2f\n", temp.readAmbientTempC(), temp.readObjectTempC());
+		DEVICE_DEBUG("I2C setup failed");
+		return ret;
+	};
 
-		px4_sleep(2);
+	return ret;
+}
+
+/* Read temperature from I2C bus */
+double HG_Temp::readTemp(uint8_t reg)
+{
+	double temp = 0;
+	const uint8_t cmd = reg;
+	uint8_t data[4] = {0};
+	uint16_t data_temp = 0;
+
+	if (OK != transfer(&cmd, 1, data, 4))
+	{
+		PX4_ERR("No Data received");
+	}
+	else
+	{
+		// switching read bytes
+		data_temp = (data[0] | data[1] << 8);
+		temp = data_temp;
+		// Conversion to degrees Celsius
+		temp *= .02;
+		temp -= 273.15;
 	}
 
-	appState.appExiting();
+	return temp;
+} /* end: readTemp */
 
-	return 0;
+/* read object temperature */
+double HG_Temp::readObjectTempC(void)
+{
+	return readTemp(MLX90614_TOBJ1);
+}
+
+/* read ambient temperature */
+double HG_Temp::readAmbientTempC(void)
+{
+	return readTemp(MLX90614_TA);
 }

@@ -42,16 +42,17 @@
 
 #include <px4_platform_common/app.h>
 #include <px4_platform_common/init.h>
+#include <px4_platform_common/log.h>
 #include <stdio.h>
 
 int PX4_MAIN(int argc, char **argv)
 {
 	px4::init(argc, argv, "hello");
 
-	printf("hello\n");
 	HelloExample hello;
 	hello.main();
 
-	printf("goodbye\n");
+	PX4_INFO("terminated\n");
+
 	return 0;
 }
