@@ -114,6 +114,7 @@ set(msg_files
 	sensor_gyro_control.msg
 	sensor_gyro_fifo.msg
 	sensor_gyro_status.msg
+	sensor_hg_mlx90614.msg
 	sensor_mag.msg
 	sensor_preflight.msg
 	sensor_selection.msg

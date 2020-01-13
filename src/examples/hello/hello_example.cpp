@@ -41,6 +41,9 @@
 
 #include "hello_example.h"
 #include "hg_temp.h"
+#include <drivers/drv_hrt.h>
+#include <uORB/uORB.h>
+#include <uORB/topics/sensor_hg_mlx90614.h>
 #include <px4_platform_common/time.h>
 #include <px4_platform_common/log.h>
 #include <unistd.h>
@@ -54,13 +57,27 @@ int HelloExample::main()
 
 	appState.setRunning(true);
 
+	/* advertise sensor_hg_mlx90614 topic */
+	struct sensor_hg_mlx90614_s temp_sensor;
+	memset(&temp_sensor, 0, sizeof(temp_sensor));
+	orb_advert_t temp_sensor_pub_fd = orb_advertise(ORB_ID(sensor_hg_mlx90614), &temp_sensor);
+
 	// wait for sensor data to be ready
 	px4_sleep(1);
 
-	while (!appState.exitRequested())
-	{
+	while (!appState.exitRequested()) {
+		uint64_t timestamp_us = hrt_absolute_time();
+		double ambient_temp = temp.readAmbientTempC();
+		double object_temp = temp.readObjectTempC();
+
 		// print temperatures
-		printf("Ambient %+2.2f | Object %+2.2f\n", temp.readAmbientTempC(), temp.readObjectTempC());
+		printf("Ambient %+2.2f | Object %+2.2f\n", ambient_temp, object_temp);
+
+		// publish temperatures
+		temp_sensor.timestamp = timestamp_us;
+		temp_sensor.ambient_temp = ambient_temp;
+		temp_sensor.object_temp = object_temp;
+		orb_publish(ORB_ID(sensor_hg_mlx90614), temp_sensor_pub_fd, &temp_sensor);
 
 		px4_sleep(2);
 	}
