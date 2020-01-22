@@ -1316,7 +1316,7 @@ protected:
 			msg.time_boot_ms = temp.timestamp / 1000;
 			msg.press_abs = 0.0;
 			msg.press_diff = 0.0;
-			msg.temperature = (int16_t) temp.object_temp;
+			msg.temperature = (int16_t) temp.object_temp * 100.0;
 
 			mavlink_msg_scaled_pressure_send_struct(_mavlink->get_channel(), &msg);
 
