@@ -84,6 +84,7 @@
 #include <uORB/topics/sensor_accel_status.h>
 #include <uORB/topics/sensor_combined.h>
 #include <uORB/topics/sensor_bias.h>
+#include <uORB/topics/sensor_hg_mlx90614.h>
 #include <uORB/topics/tecs_status.h>
 #include <uORB/topics/telemetry_status.h>
 #include <uORB/topics/transponder_report.h>
@@ -1247,6 +1248,77 @@ protected:
 			msg.yawspeed = angular_velocity.xyz[2];
 
 			mavlink_msg_attitude_send_struct(_mavlink->get_channel(), &msg);
+
+			return true;
+		}
+
+		return false;
+	}
+};
+
+class MavlinkStreamScaledPressure : public MavlinkStream
+{
+public:
+	const char *get_name() const override
+	{
+		return MavlinkStreamScaledPressure::get_name_static();
+	}
+
+	static const char *get_name_static()
+	{
+		return "SCALED_PRESSURE";
+	}
+
+	static uint16_t get_id_static()
+	{
+		return MAVLINK_MSG_ID_SCALED_PRESSURE;
+	}
+
+	uint16_t get_id() override
+	{
+		return get_id_static();
+	}
+
+	static MavlinkStream *new_instance(Mavlink *mavlink)
+	{
+		return new MavlinkStreamScaledPressure(mavlink);
+	}
+
+	unsigned get_size() override
+	{
+		return MAVLINK_MSG_ID_SCALED_PRESSURE_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+	}
+
+private:
+	MavlinkOrbSubscription *_hg_mlx_sub;
+	uint64_t _hg_mlx_time{0};
+
+	/* do not allow top copying this class */
+	MavlinkStreamScaledPressure(MavlinkStreamScaledPressure &) = delete;
+	MavlinkStreamScaledPressure &operator = (const MavlinkStreamScaledPressure &) = delete;
+
+
+protected:
+	explicit MavlinkStreamScaledPressure(Mavlink *mavlink) : MavlinkStream(mavlink),
+		_hg_mlx_sub(_mavlink->add_orb_subscription(ORB_ID(sensor_hg_mlx90614)))
+	{}
+
+	bool send(const hrt_abstime t) override
+	{
+		sensor_hg_mlx90614_s temp;
+
+		PX4_INFO("here");
+
+		if (_hg_mlx_sub->update(&_hg_mlx_time, &temp)) {
+			PX4_INFO("there");
+			mavlink_scaled_pressure_t msg{};
+
+			msg.time_boot_ms = temp.timestamp / 1000;
+			msg.press_abs = 0.0;
+			msg.press_diff = 0.0;
+			msg.temperature = (int16_t) temp.object_temp;
+
+			mavlink_msg_scaled_pressure_send_struct(_mavlink->get_channel(), &msg);
 
 			return true;
 		}
@@ -5111,6 +5183,7 @@ static const StreamListItem streams_list[] = {
 	StreamListItem(&MavlinkStreamScaledIMU2::new_instance, &MavlinkStreamScaledIMU2::get_name_static, &MavlinkStreamScaledIMU2::get_id_static),
 	StreamListItem(&MavlinkStreamScaledIMU3::new_instance, &MavlinkStreamScaledIMU3::get_name_static, &MavlinkStreamScaledIMU3::get_id_static),
 	StreamListItem(&MavlinkStreamAttitude::new_instance, &MavlinkStreamAttitude::get_name_static, &MavlinkStreamAttitude::get_id_static),
+	StreamListItem(&MavlinkStreamScaledPressure::new_instance, &MavlinkStreamScaledPressure::get_name_static, &MavlinkStreamScaledPressure::get_id_static),
 	StreamListItem(&MavlinkStreamAttitudeQuaternion::new_instance, &MavlinkStreamAttitudeQuaternion::get_name_static, &MavlinkStreamAttitudeQuaternion::get_id_static),
 	StreamListItem(&MavlinkStreamVFRHUD::new_instance, &MavlinkStreamVFRHUD::get_name_static, &MavlinkStreamVFRHUD::get_id_static),
 	StreamListItem(&MavlinkStreamGPSRawInt::new_instance, &MavlinkStreamGPSRawInt::get_name_static, &MavlinkStreamGPSRawInt::get_id_static),
