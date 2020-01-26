@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2015 Mark Charlebois. All rights reserved.
+ *   Copyright 2020 NXP.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,9 +12,9 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -30,50 +30,29 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file app.h
+ * @file hovergames_main.cpp
  *
- * PX4 app template classes, functions and defines. Apps need to call their
- * main function PX4_MAIN.
+ * Example app for temperature measurement with Melaxis MLX90614 using I2C
+ *
+ * @author Ingo von Maurich
  */
 
-#pragma once
+#include "hovergames_example.h"
 
-namespace px4
+#include <px4_platform_common/app.h>
+#include <px4_platform_common/init.h>
+#include <px4_platform_common/log.h>
+#include <stdio.h>
+
+int PX4_MAIN(int argc, char **argv)
 {
+	px4::init(argc, argv, "hovergames");
 
-class AppState
-{
-public:
-	~AppState() {}
+	HovergamesExample hovergames;
+	hovergames.main();
 
-	AppState() : _exitRequested(false), _isRunning(false) {}
+	PX4_INFO("terminated\n");
 
-	bool exitRequested() { return _exitRequested; }
-	void requestExit() { _exitRequested = true; }
-
-	bool isRunning() { return _isRunning; }
-	void setRunning(bool running) { _isRunning = running; }
-	void appExiting()
-	{
-		_isRunning = false;
-		_exitRequested = false;
-	}
-
-protected:
-	bool _exitRequested;
-	bool _isRunning;
-
-private:
-	AppState(const AppState &);
-	const AppState &operator=(const AppState &);
-};
-
-} // namespace px4
-
-// Task/process based build
-
-#ifdef PX4_MAIN
-extern int PX4_MAIN(int argc, char *argv[]);
-#endif
+	return 0;
+}

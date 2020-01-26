@@ -1,6 +1,6 @@
 /****************************************************************************
  *
- * Copyright (c) 2015 Mark Charlebois. All rights reserved.
+ *   Copyright 2020 NXP.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -12,9 +12,9 @@
  *    notice, this list of conditions and the following disclaimer in
  *    the documentation and/or other materials provided with the
  *    distribution.
- * 3. Neither the name PX4 nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
@@ -30,50 +30,56 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
 /**
- * @file app.h
+ * @file hovergames_example.cpp
  *
- * PX4 app template classes, functions and defines. Apps need to call their
- * main function PX4_MAIN.
+ * Example app for temperature measurement with Melaxis MLX90614 using I2C
+ *
+ * @author Ingo von Maurich
  */
 
-#pragma once
+#include "hovergames_example.h"
+#include "hg_temp.h"
+#include <drivers/drv_hrt.h>
+#include <uORB/uORB.h>
+#include <uORB/topics/sensor_hg_mlx90614.h>
+#include <px4_platform_common/time.h>
+#include <px4_platform_common/log.h>
+#include <unistd.h>
+#include <stdio.h>
 
-namespace px4
+px4::AppState HovergamesExample::appState;
+
+int HovergamesExample::main()
 {
+	HG_Temp temp;
 
-class AppState
-{
-public:
-	~AppState() {}
+	appState.setRunning(true);
 
-	AppState() : _exitRequested(false), _isRunning(false) {}
+	/* advertise sensor_hg_mlx90614 topic */
+	struct sensor_hg_mlx90614_s temp_sensor;
+	memset(&temp_sensor, 0, sizeof(temp_sensor));
+	orb_advert_t temp_sensor_pub_fd = orb_advertise(ORB_ID(sensor_hg_mlx90614), &temp_sensor);
 
-	bool exitRequested() { return _exitRequested; }
-	void requestExit() { _exitRequested = true; }
+	// wait for sensor data to be ready
+	px4_sleep(1);
 
-	bool isRunning() { return _isRunning; }
-	void setRunning(bool running) { _isRunning = running; }
-	void appExiting()
+	while (!appState.exitRequested())
 	{
-		_isRunning = false;
-		_exitRequested = false;
+		uint64_t timestamp_us = hrt_absolute_time();
+		double ambient_temp = temp.readAmbientTempC();
+		double object_temp = temp.readObjectTempC();
+
+		// publish temperatures
+		temp_sensor.timestamp = timestamp_us;
+		temp_sensor.ambient_temp = ambient_temp;
+		temp_sensor.object_temp = object_temp;
+		orb_publish(ORB_ID(sensor_hg_mlx90614), temp_sensor_pub_fd, &temp_sensor);
+
+		px4_sleep(1);
 	}
 
-protected:
-	bool _exitRequested;
-	bool _isRunning;
+	appState.appExiting();
 
-private:
-	AppState(const AppState &);
-	const AppState &operator=(const AppState &);
-};
-
-} // namespace px4
-
-// Task/process based build
-
-#ifdef PX4_MAIN
-extern int PX4_MAIN(int argc, char *argv[]);
-#endif
+	return 0;
+}
